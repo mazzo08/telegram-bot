@@ -1,4 +1,6 @@
 require('dotenv').config();
+const port = process.env.PORT || 4000 
+
 const TelegramBot = require('node-telegram-bot-api');
 
 // Ottieni il token dalle variabili d'ambiente
@@ -75,3 +77,24 @@ bot.on('message', (msg) => {
 });
 
 console.log('Bot avviato con successo!');
+
+const fetch = require('node-fetch');
+
+// URL del server su Render che vuoi pingare
+const PING_URL = process.env.PING_URL;
+
+if (!PING_URL) {
+  console.warn('PING_URL non impostato. Nessun ping verrà eseguito.');
+} else {
+  // Ogni 10 minuti (600000 ms)
+  setInterval(() => {
+    fetch(PING_URL)
+      .then(res => {
+        console.log(`[${new Date().toISOString()}] Ping inviato a ${PING_URL} - Stato: ${res.status}`);
+      })
+      .catch(err => {
+        console.error(`Errore durante il ping a ${PING_URL}:`, err.message);
+      });
+  }, 600000); // 10 minuti in millisecondi
+}
+
