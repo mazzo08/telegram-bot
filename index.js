@@ -1,7 +1,8 @@
 require('dotenv').config();
-const port = process.env.PORT || 4000 
+const port = process.env.PORT || 4000;
 
 const TelegramBot = require('node-telegram-bot-api');
+const net = require('net');
 
 // Ottieni il token dalle variabili d'ambiente
 const token = process.env.BOT_TOKEN;
@@ -41,6 +42,7 @@ Versione: 1.0.0
 Ambiente: ${process.env.NODE_ENV || 'development'}
 `);
 });
+
 // Gestisci il comando /memory
 bot.onText(/\/memory/, (msg) => {
   const chatId = msg.chat.id;
@@ -62,7 +64,7 @@ Ambiente: ${process.env.NODE_ENV || 'development'}
 // Gestisci messaggi non riconosciuti
 bot.on('message', (msg) => {
   const chatId = msg.chat.id;
-  
+
   // Ignora i comandi che abbiamo già gestito
   if (msg.text && (msg.text.startsWith('/start') || 
                    msg.text.startsWith('/help') || 
@@ -72,29 +74,34 @@ bot.on('message', (msg) => {
                 )) {
     return;
   }
-  
+
   bot.sendMessage(chatId, 'Non ho capito. Usa /help per vedere i comandi disponibili.');
 });
 
 console.log('Bot avviato con successo!');
 
-const fetch = require('node-fetch');
+// --- Parte per tenere "sveglio" il bot con connessione TCP ---
 
-// URL del server su Render che vuoi pingare
-const PING_URL = process.env.PING_URL;
+const HOST = '127.0.0.1'; // localhost
+const PORT = port;
 
-if (!PING_URL) {
-  console.warn('PING_URL non impostato. Nessun ping verrà eseguito.');
-} else {
-  // Ogni 10 minuti (600000 ms)
-  setInterval(() => {
-    fetch(PING_URL)
-      .then(res => {
-        console.log(`[${new Date().toISOString()}] Ping inviato a ${PING_URL} - Stato: ${res.status}`);
-      })
-      .catch(err => {
-        console.error(`Errore durante il ping a ${PING_URL}:`, err.message);
-      });
-  }, 600000); // 10 minuti in millisecondi
-}
+setInterval(() => {
+  const socket = new net.Socket();
 
+  socket.setTimeout(5000); // timeout di 5 secondi
+
+  socket.connect(PORT, HOST, () => {
+    console.log(`[${new Date().toISOString()}] Connessione a ${HOST}:${PORT} riuscita.`);
+    socket.end(); // chiude la connessione
+  });
+
+  socket.on('timeout', () => {
+    console.error(`[${new Date().toISOString()}] Timeout nella connessione a ${HOST}:${PORT}`);
+    socket.destroy();
+  });
+
+  socket.on('error', (err) => {
+    console.error(`[${new Date().toISOString()}] Errore connessione a ${HOST}:${PORT}:`, err.message);
+  });
+
+}, 600000); // ogni 10 minuti
